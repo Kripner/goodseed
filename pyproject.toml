@@ -4,10 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "goodseed"
-version = "0.1.0"
-description = "ML experiment tracker with local-first durability"
+version = "0.2.3"
+description = "ML experiment tracker"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICEN[CS]E*"]
 requires-python = ">=3.9"
 authors = [
     { name = "Goodseed Team" }
@@ -41,6 +42,11 @@ examples = [
 
 [project.scripts]
 goodseed = "goodseed.cli:main"
+
+[project.urls]
+Homepage = "https://goodseed.ai/"
+Repository = "https://github.com/GoodSeedAI/goodseed-cli"
+Issues = "https://github.com/GoodSeedAI/goodseed-cli/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/goodseed"]
