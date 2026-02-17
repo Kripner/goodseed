@@ -2,6 +2,18 @@
 
 ML experiment tracker. Logs metrics and configs to local SQLite files, serves them via a built-in HTTP server, and visualizes them in the browser.
 
+## Install
+
+```bash
+cd goodseed
+pip install -e .
+```
+
+For development:
+```bash
+pip install -e ".[dev]"
+```
+
 ## Quick Start
 
 ```python
@@ -19,20 +31,6 @@ Then view your runs:
 
 ```bash
 goodseed serve
-# opens http://localhost:8765
-# view at https://goodseed.ai/app/local?port=8765
-```
-
-## Install
-
-```bash
-cd goodseed
-pip install -e .
-```
-
-For development:
-```bash
-pip install -e ".[dev]"
 ```
 
 ## How It Works
