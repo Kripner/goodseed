@@ -53,6 +53,19 @@ def _init_schema(conn: sqlite3.Connection) -> None:
             ts INTEGER NOT NULL,
             PRIMARY KEY (series_id, step)
         );
+
+        CREATE TABLE IF NOT EXISTS string_series (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS string_points (
+            series_id INTEGER NOT NULL,
+            step INTEGER NOT NULL,
+            value TEXT NOT NULL,
+            ts INTEGER NOT NULL,
+            PRIMARY KEY (series_id, step)
+        );
     """)
     conn.commit()
 
@@ -181,6 +194,66 @@ class LocalStorage:
             rows = self._conn.execute(
                 """SELECT DISTINCT s.path FROM metric_series s
                    JOIN metric_points p ON s.id = p.series_id
+                   ORDER BY s.path"""
+            ).fetchall()
+            return [row["path"] for row in rows]
+
+    def _get_string_series_id(self, conn: sqlite3.Connection, path: str) -> int:
+        """Get or create a series ID for a string series path. Must hold the lock."""
+        conn.execute(
+            "INSERT OR IGNORE INTO string_series (path) VALUES (?)", (path,)
+        )
+        row = conn.execute(
+            "SELECT id FROM string_series WHERE path = ?", (path,)
+        ).fetchone()
+        return row["id"]
+
+    def log_string_points(
+        self, points: List[Tuple[str, int, str, int]]
+    ) -> None:
+        """Log string series points. Each tuple: (path, step, value, ts_unix)."""
+        with self._transaction() as conn:
+            for path, step, value, ts in points:
+                series_id = self._get_string_series_id(conn, path)
+                conn.execute(
+                    """INSERT OR REPLACE INTO string_points
+                       (series_id, step, value, ts) VALUES (?, ?, ?, ?)""",
+                    (series_id, step, value, ts),
+                )
+
+    def get_string_points(
+        self, path: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get string series points, optionally filtered by path."""
+        with self._lock:
+            if self._conn is None:
+                raise RuntimeError("Storage is closed")
+            if path:
+                rows = self._conn.execute(
+                    """SELECT s.path, p.step, p.value, p.ts
+                       FROM string_points p
+                       JOIN string_series s ON p.series_id = s.id
+                       WHERE s.path = ?
+                       ORDER BY p.step""",
+                    (path,),
+                ).fetchall()
+            else:
+                rows = self._conn.execute(
+                    """SELECT s.path, p.step, p.value, p.ts
+                       FROM string_points p
+                       JOIN string_series s ON p.series_id = s.id
+                       ORDER BY s.path, p.step"""
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_string_series_paths(self) -> List[str]:
+        """Get all string series paths that have at least one point."""
+        with self._lock:
+            if self._conn is None:
+                raise RuntimeError("Storage is closed")
+            rows = self._conn.execute(
+                """SELECT DISTINCT s.path FROM string_series s
+                   JOIN string_points p ON s.id = p.series_id
                    ORDER BY s.path"""
             ).fetchall()
             return [row["path"] for row in rows]

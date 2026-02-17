@@ -52,7 +52,8 @@ The `goodseed serve` command starts a local HTTP server that reads these files a
 goodseed                   # Start the server (default command)
 goodseed serve [dir]       # Start the server, optionally from a specific directory
 goodseed serve --port 9000 # Use a custom port
-goodseed list              # List local runs
+goodseed list              # List projects
+goodseed list -p default   # List runs in a project
 ```
 
 ## Tests

@@ -87,6 +87,7 @@ class Run:
         run_name: Optional[str] = None,
         goodseed_home: Optional[Union[str, Path]] = None,
         log_dir: Optional[Union[str, Path]] = None,
+        created_at: Optional[str] = None,
     ):
         self.project = project or get_default_project()
         self.experiment_name = experiment_name
@@ -107,7 +108,9 @@ class Run:
         self._db_path = db_path
         self._storage.set_meta("run_name", self.run_name)
         self._storage.set_meta("project", self.project)
-        self._storage.set_meta("created_at", datetime.now(timezone.utc).isoformat())
+        self._storage.set_meta(
+            "created_at", created_at or datetime.now(timezone.utc).isoformat()
+        )
         self._storage.set_meta("status", "running")
         if experiment_name:
             self._storage.set_meta("experiment_name", experiment_name)
@@ -168,6 +171,31 @@ class Run:
                 points.append((path, step, float(v), ts))
 
             self._storage.log_metric_points(points)
+
+    def log_string_series(
+        self,
+        data: Dict[str, str],
+        step: int,
+    ) -> None:
+        """Log string series values at a given step.
+
+        Args:
+            data: Dictionary of series_path -> string_value.
+            step: The step number (integer).
+        """
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("Run is closed")
+
+            step = int(step)
+            ts = int(datetime.now(timezone.utc).timestamp())
+
+            points = []
+            for k, v in data.items():
+                path = normalize_path(k)
+                points.append((path, step, str(v), ts))
+
+            self._storage.log_string_points(points)
 
     def close(self, status: str = "finished") -> None:
         """Close the run.
